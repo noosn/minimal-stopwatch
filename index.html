@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>스톱워치</title>
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+:root{color-scheme:dark;--bg:#000;--text:#eeeeef;--muted:#88898d;--line:#242428;--low:#48d6c2;--high:#ff879b;--clock-limit:185px;--lap-limit:40px;--button-width:170px;--button-height:40px;--button-font:13px;--button-gap:12px}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--bg);scroll-behavior:auto}
+body{margin:0;background:var(--bg);color:var(--text);font:400 15px/1.4 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,"Apple SD Gothic Neo",sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible{outline:2px solid #d0d0d0;outline-offset:3px}
+.app{position:relative;background:#000;min-height:100vh;min-height:100dvh;padding:1px 22px 80px}
+.tools{position:absolute;right:clamp(16px,3vw,42px);top:24px;display:flex;align-items:center;gap:10px;z-index:10}
+.icon-btn{display:grid;place-items:center;width:38px;height:38px;color:#a6a6aa;border:0;border-radius:9px;background:transparent;transition:background .14s,color .14s}
+.icon-btn:hover,.icon-btn[aria-expanded=true]{color:#fff;background:#171719}
+.icon-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.content{max-width:880px;margin:0 auto}
+.face{text-align:center;padding-top:clamp(92px,10.5vh,130px)}
+.elapsed{white-space:nowrap;font-size:clamp(45px,11.8vw,var(--clock-limit));line-height:1.04;letter-spacing:-.065em;font-weight:300;font-variant-numeric:tabular-nums;color:#e2e2e5}
+.lap-time{white-space:nowrap;margin-top:25px;font-size:clamp(24px,4vw,var(--lap-limit));line-height:1.2;letter-spacing:-.045em;font-weight:350;font-variant-numeric:tabular-nums;color:#c4c4c8}
+.controls{margin:34px auto 0;display:flex;width:min(100%,calc(var(--button-width)*2 + var(--button-gap)));gap:var(--button-gap);justify-content:center}
+.control{display:block;flex:1 1 0;min-width:0;max-width:var(--button-width);padding:0 6px;border:1px solid #343438;border-radius:8px;height:var(--button-height);background:#202024;color:#f2f2f2;font-weight:600;font-size:var(--button-font);transition:background .14s,border-color .14s,transform .14s}
+.control:hover{background:#333338;border-color:#53535a}
+.control:active{transform:scale(.99)}
+.control.strong{background:#e4e4e6;color:#000;border-color:#e4e4e6}
+.control.strong:hover{background:#fff;border-color:#fff}
+.control.single{flex:0 1 var(--button-width);max-width:100%}
+.history{margin:52px auto 0}
+.history-head{height:51px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;border:1px solid var(--line);border-bottom:0;border-radius:13px 13px 0 0;background:#0a0a0d}
+.history-head h2{margin:0;font-size:17px;letter-spacing:-.02em;font-weight:600}
+.history-actions{display:flex;align-items:center;gap:3px}
+.hist-btn{width:34px;height:34px;border:0;background:transparent;border-radius:7px;color:#85858d;display:grid;place-items:center}
+.hist-btn:hover{background:#202024;color:#fff}
+.hist-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.history-viewport{max-height:310px;overflow-y:auto;overflow-x:auto;border:1px solid var(--line);border-radius:0 0 13px 13px;background:#060609;scrollbar-color:#303035 transparent}
+table{border-collapse:collapse;width:100%;table-layout:fixed;font-variant-numeric:tabular-nums;white-space:nowrap}
+th,td{height:49px;text-align:left;padding:10px 14px;font-size:13px;border-bottom:1px solid #1a1a20}
+thead{position:sticky;top:0;z-index:1;background:#101013}
+th{font-size:12px;font-weight:500;color:#83838a}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#121217}
+td{color:#dedee0}
+th:nth-child(1),td:nth-child(1){width:8%;color:#898992}
+th:nth-child(2),td:nth-child(2){width:23%}
+th:nth-child(3),td:nth-child(3){width:24%}
+th:nth-child(4),td:nth-child(4){width:38%}
+th:nth-child(5),td:nth-child(5){width:7%;padding-left:0;padding-right:7px;text-align:center}
+.fast td:nth-child(1),.fast td:nth-child(2),.fast td:nth-child(3){color:var(--low)}
+.slow td:nth-child(1),.slow td:nth-child(2),.slow td:nth-child(3){color:var(--high)}
+.remove-lap{border:0;background:none;color:#777881;font-size:17px;padding:4px 8px;border-radius:6px}
+.remove-lap:hover{color:#fff;background:#24242a}
+.settings{position:fixed;z-index:100;top:69px;right:clamp(14px,3vw,42px);width:min(384px,calc(100vw - 28px));max-height:calc(100dvh - 84px);overflow:auto;background:#101013;border:1px solid #35353a;border-radius:14px;box-shadow:0 18px 50px #000a;padding:7px 20px 14px;scrollbar-color:#37373d transparent}
+.settings-row{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:56px;border-bottom:1px solid #29292e;font-size:13px}
+.settings-row:last-child{border-bottom:0}
+.settings-name{color:#dddde1}
+.toggle{display:flex;align-items:center;cursor:pointer;flex-shrink:0}
+.toggle input{position:absolute;opacity:0;width:1px;height:1px}
+.toggle-track{display:block;width:37px;height:22px;border-radius:30px;background:#414147;position:relative;transition:background .12s}
+.toggle-track:after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#e7e7e8;transition:transform .12s}
+.toggle input:checked+.toggle-track{background:#e7e7e8}
+.toggle input:checked+.toggle-track:after{transform:translateX(15px);background:#18181a}
+.toggle input:focus-visible+.toggle-track{outline:2px solid #fff;outline-offset:3px}
+.range{width:145px;accent-color:#ddd}
+.size-label{font-size:12px;color:#909097;text-align:right;min-width:32px}
+.inline-setting{display:flex;gap:6px;align-items:center}
+.num{width:48px;height:31px;border:1px solid #35353a;border-radius:5px;background:#19191e;color:#eee;text-align:center;font-size:12px}
+.muted-sep{color:#888}
+@media(max-width:650px){
+ .app{padding:1px 13px 60px}.tools{top:12px;right:12px;gap:1px}
+ .face{padding-top:clamp(105px,14vh,160px)}
+ .elapsed{font-size:clamp(42px,11.65vw,var(--clock-limit));letter-spacing:-.065em}
+ .lap-time{margin-top:19px;font-size:clamp(25px,5.8vw,var(--lap-limit))}
+ .controls{margin-top:28px;gap:min(10px,var(--button-gap))}
+ .history{margin-top:45px}.history-head h2{font-size:15px}
+ th,td{font-size:11px;padding:10px 8px}th{font-size:10px}
+ th:nth-child(1),td:nth-child(1){width:8%}
+ th:nth-child(2),td:nth-child(2){width:23%}
+ th:nth-child(3),td:nth-child(3){width:23%}
+ th:nth-child(4),td:nth-child(4){width:38%}
+ th:nth-child(5),td:nth-child(5){width:8%}
+ .settings{top:55px;right:12px}
+}
+/* Persisted immersive layout: survives Escape, browser fullscreen changes and reloads. */
+body.immersive-on{overflow:hidden}
+.app.immersive{position:fixed;inset:0;height:100dvh;width:100%;overflow-y:auto;overflow-x:hidden;z-index:40}
+
+.app:is(:fullscreen,.immersive){overflow-y:auto;overflow-x:hidden;background:#000;padding:0 20px}
+.app:is(:fullscreen,.immersive) .tools,.app:is(:fullscreen,.immersive) .settings{display:none!important}
+.app:is(:fullscreen,.immersive) .content{max-width:none;width:100%;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:55px 0}
+.app:is(:fullscreen,.immersive) .face{padding:0;width:min(92vw,1100px);flex-shrink:0}
+.app:is(:fullscreen,.immersive) .elapsed{font-size:clamp(52px,12.2vw,var(--clock-limit))}
+.app:is(:fullscreen,.immersive) .lap-time{margin-top:32px}
+.app:is(:fullscreen,.immersive) .controls{width:auto;margin-top:27px;gap:clamp(8px,calc(var(--button-gap)*.85),14px)}
+.app:is(:fullscreen,.immersive) .control{flex:0 1 auto;width:clamp(56px,calc(var(--button-width)*.65),220px);height:clamp(29px,calc(var(--button-height)*.88),55px);min-width:0;max-width:none;padding:0 9px;font-size:clamp(10px,calc(var(--button-font)*.92),18px)}
+.app:is(:fullscreen,.immersive) .history{width:min(880px,92vw);margin:42px auto 0}
+.app:is(:fullscreen,.immersive).fs-records-visible .content{justify-content:flex-start;padding-top:clamp(75px,13vh,130px)}
+.app:is(:fullscreen,.immersive):not(.fs-lap-visible) .lap-time{display:none}
+.app:is(:fullscreen,.immersive):not(.fs-records-visible) .history{display:none!important}
+.app:is(:fullscreen,.immersive):not(.fs-buttons-visible) .controls{display:none}
+@media(max-width:650px){.app:is(:fullscreen,.immersive) .elapsed{font-size:clamp(42px,11.65vw,var(--clock-limit))}.app:is(:fullscreen,.immersive) .controls{gap:9px}.app:is(:fullscreen,.immersive) .lap-time{margin-top:22px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="stopwatch-app">
+  <nav class="tools" aria-label="도구">
+    <button type="button" class="icon-btn" id="settings-button" aria-label="설정" aria-expanded="false" aria-controls="settings" title="설정">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.7 4.2a2.3 2.3 0 0 1 4.6 0 2.3 2.3 0 0 0 3.3 1.9 2.3 2.3 0 0 1 2.3 4 2.3 2.3 0 0 0 0 3.8 2.3 2.3 0 0 1-2.3 4 2.3 2.3 0 0 0-3.3 1.9 2.3 2.3 0 0 1-4.6 0 2.3 2.3 0 0 0-3.3-1.9 2.3 2.3 0 0 1-2.3-4 2.3 2.3 0 0 0 0-3.8 2.3 2.3 0 0 1 2.3-4 2.3 2.3 0 0 0 3.3-1.9Z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <button type="button" class="icon-btn" id="fullscreen-button" aria-label="전체 화면" title="전체 화면 (F)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg>
+    </button>
+  </nav>
+  <main class="content">
+    <section class="face" aria-label="스톱워치">
+      <div class="elapsed" id="elapsed" role="timer" aria-label="전체 경과 시간">00:00:00</div>
+      <div class="lap-time" id="lap-time" aria-label="현재 랩 시간">00:00:00</div>
+      <div class="controls">
+        <button type="button" class="control strong single" id="start">시작</button>
+        <button type="button" class="control strong" id="resume" hidden>계속</button>
+        <button type="button" class="control strong" id="pause" hidden>일시 정지</button>
+        <button type="button" class="control" id="lap" hidden>랩</button>
+        <button type="button" class="control" id="reset" hidden>초기화</button>
+      </div>
+    </section>
+    <section class="history" id="history" hidden aria-label="랩 기록">
+      <div class="history-head"><h2>랩 기록</h2><div class="history-actions">
+        <button type="button" class="hist-btn" id="export" aria-label="CSV 내보내기" title="CSV 내보내기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg></button>
+        <button type="button" class="hist-btn" id="clear" aria-label="모든 랩 기록 삭제 (Shift+R)" title="모든 랩 기록 삭제 (Shift+R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6m5 4v7m4-7v7"/></svg></button>
+      </div></div>
+      <div class="history-viewport" id="history-viewport"><table>
+        <thead><tr><th>#</th><th>랩 타임</th><th>경과 시간</th><th>현재 시간</th><th></th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table></div>
+    </section>
+  </main>
+  <aside class="settings" id="settings" hidden aria-label="설정">
+    <div class="settings-row"><span class="settings-name">최단·최장 랩 색 구분</span><label class="toggle"><input type="checkbox" id="set-colors" aria-label="최단·최장 랩 색 구분"><span class="toggle-track"></span></label></div>
+    <div class="settings-row"><span class="settings-name">전체 화면에서 랩 시간 표시</span><label class="toggle"><input type="checkbox" id="set-fs-lap" checked aria-label="전체 화면에서 랩 시간 표시"><span class="toggle-track"></span></label></div>
+    <div class="settings-row"><span class="settings-name">전체 화면에서 랩 기록 표시</span><label class="toggle"><input type="checkbox" id="set-fs-records" aria-label="전체 화면에서 랩 기록 표시"><span class="toggle-track"></span></label></div>
+    <div class="settings-row"><span class="settings-name">전체 화면에서 버튼 표시</span><label class="toggle"><input type="checkbox" id="set-fs-buttons" checked aria-label="전체 화면에서 버튼 표시"><span class="toggle-track"></span></label></div>
+    <div class="settings-row"><span class="settings-name">메인 글자 크기</span><div class="inline-setting"><input type="range" id="set-main-size" class="range" min="90" max="250" step="2" value="185" aria-label="메인 글자 크기"><output class="size-label" id="main-size-label">185</output></div></div>
+    <div class="settings-row"><span class="settings-name">랩 글자 크기</span><div class="inline-setting"><input type="range" id="set-lap-size" class="range" min="20" max="85" step="1" value="40" aria-label="랩 글자 크기"><output class="size-label" id="lap-size-label">40</output></div></div>
+    <div class="settings-row"><span class="settings-name">버튼 크기</span><div class="inline-setting"><input type="range" id="set-button-size" class="range" min="80" max="320" step="5" value="170" aria-label="버튼 크기"><output class="size-label" id="button-size-label">170</output></div></div>
+    <div class="settings-row"><span class="settings-name">반복 알림 소리</span><label class="toggle"><input type="checkbox" id="set-beep" aria-label="반복 알림 소리"><span class="toggle-track"></span></label></div>
+    <div class="settings-row" id="beep-duration-row" hidden><span class="settings-name">알림 간격</span><div class="inline-setting"><input class="num" type="number" id="beep-h" min="0" max="99" value="0" aria-label="시"><span class="muted-sep">:</span><input class="num" type="number" id="beep-m" min="0" max="59" value="1" aria-label="분"><span class="muted-sep">:</span><input class="num" type="number" id="beep-s" min="0" max="59" value="0" aria-label="초"></div></div>
+  </aside>
+</div>
+<script>
+(()=>{'use strict';
+  const KEY='stopwatch_minimal_v2';
+  const OLD_KEY='mono_stopwatch_2026_v1';
+  const $=id=>document.getElementById(id);
+  const defaults={elapsedMs:0,running:false,started:false,lapStartMs:0,savedAt:0,laps:[],immersive:false,settings:{colorLaps:false,fsLap:true,fsRecords:false,fsButtons:true,mainSize:185,lapSize:40,buttonSize:170,beep:false,beepH:0,beepM:1,beepS:0}};
+  const clone=()=>JSON.parse(JSON.stringify(defaults));
+  let state=clone();
+  try{
+    let saved=JSON.parse(localStorage.getItem(KEY)||'null');
+    if(!saved){
+      const old=JSON.parse(localStorage.getItem(OLD_KEY)||'null');
+      if(old){
+        saved={elapsedMs:old.elapsed||0,running:old.running,started:old.hasStarted,lapStartMs:old.lapStart,laps:old.laps,savedAt:old.savedAt,
+          settings:{fsButtons:old.settings?.fsButtons,mainSize:old.settings?.mainSize||185,lapSize:old.settings?.lapSize||40,beep:old.settings?.beep,beepH:old.settings?.beepH,beepM:old.settings?.beepM,beepS:old.settings?.beepS}};
+      }
+    }
+    if(saved&&typeof saved==='object'){
+      state={...defaults,...saved,settings:{...defaults.settings,...Object.fromEntries(Object.entries(saved.settings||{}).filter(([,v])=>v!==undefined))}};
+      state.elapsedMs=Math.max(0,Number(state.elapsedMs)||0);
+      state.lapStartMs=Math.max(0,Number(state.lapStartMs)||0);
+      state.laps=Array.isArray(state.laps)?state.laps.filter(e=>e&&Number.isFinite(Number(e.lapMs))&&Number.isFinite(Number(e.totalMs))).slice(0,4000):[];
+      if(state.running)state.elapsedMs+=Math.max(0,Date.now()-(Number(state.savedAt)||Date.now()));
+    }
+  }catch(_){/* Storage permissions may vary by browser. */}
+  // Normalize older lap arrays (some previous versions stored newest first).
+  state.laps=state.laps.map((entry,i)=>({
+    ...entry,
+    id:entry.id ?? `old-${i}-${Number(entry.at)||0}`,
+    at:Number.isFinite(Number(entry.at))?Number(entry.at):Date.now(),
+    lapMs:Math.max(0,Number(entry.lapMs)||0),
+    totalMs:Math.max(0,Number(entry.totalMs)||0)
+  })).sort((a,b)=>a.at-b.at);
+  const numberSetting=(key,min,max,fallback)=>{
+    const n=Number(state.settings[key]);
+    state.settings[key]=Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;
+  };
+  numberSetting('mainSize',90,250,185);
+  numberSetting('lapSize',20,85,40);
+  numberSetting('buttonSize',80,320,170);
+  state.immersive=state.immersive===true;
+  state.running=state.running===true;
+  state.started=state.started===true||state.running||state.elapsedMs>0;
+  let baseElapsed=state.elapsedMs;
+  let startPerf=performance.now();
+  let audio=null;
+  let beepCycle=0;
+  let renderedTotal='',renderedLap='';
+  const pad=n=>String(Math.floor(n)).padStart(2,'0');
+  const timeFormat=ms=>{
+    const secs=Math.floor(Math.max(0,Number(ms)||0)/1000);
+    return `${pad(Math.floor(secs/3600))}:${pad(Math.floor(secs/60)%60)}:${pad(secs%60)}`;
+  };
+  const nowElapsed=()=>Math.max(0,baseElapsed+(state.running?performance.now()-startPerf:0));
+  const persist=()=>{
+    try{localStorage.setItem(KEY,JSON.stringify({...state,elapsedMs:nowElapsed(),savedAt:Date.now()}));}catch(_){/* Never show a warning dialog. */}
+  };
+  const clock=()=>{
+    const total=timeFormat(nowElapsed());
+    const lap=timeFormat(nowElapsed()-state.lapStartMs);
+    if(total!==renderedTotal){$('elapsed').textContent=total;renderedTotal=total;}
+    if(lap!==renderedLap){$('lap-time').textContent=lap;renderedLap=lap;}
+    beepCheck();
+  };
+  const controls=()=>{
+    const idle=!state.started&&!state.running;
+    $('start').hidden=!idle;
+    $('pause').hidden=!state.running;
+    $('lap').hidden=!state.running;
+    $('resume').hidden=state.running||idle;
+    $('reset').hidden=state.running||idle;
+  };
+  function soundInit(){
+    if(!state.settings.beep)return;
+    try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio&&!audio)audio=new Audio();if(audio?.state==='suspended')audio.resume().catch(()=>{});}catch(_){}
+  }
+  function interval(){const s=state.settings;return (Number(s.beepH)*3600+Number(s.beepM)*60+Number(s.beepS))*1000;}
+  function beepReset(){const ms=interval();beepCycle=ms>0?Math.floor(nowElapsed()/ms):0;}
+  function beepCheck(){
+    if(!state.running||!state.settings.beep)return;
+    const ms=interval();if(ms<=0)return;
+    const cycle=Math.floor(nowElapsed()/ms);
+    if(cycle>beepCycle&&audio?.state==='running'){
+      try{const o=audio.createOscillator(),g=audio.createGain(),t=audio.currentTime;
+        o.type='sine';o.frequency.value=850;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.08,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.18);o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+.2);}catch(_){}
+    }
+    beepCycle=cycle;
+  }
+  function start(){
+    if(state.running)return;
+    baseElapsed=nowElapsed();startPerf=performance.now();state.running=true;state.started=true;
+    soundInit();beepReset();controls();clock();persist();
+  }
+  function pause(){
+    if(!state.running)return;
+    baseElapsed=nowElapsed();state.running=false;controls();clock();persist();
+  }
+  function reset(){
+    baseElapsed=0;startPerf=performance.now();state.running=false;state.started=false;state.lapStartMs=0;
+    beepReset();controls();clock();persist();
+  }
+  function dateFormat(ms){
+    const d=new Date(Number(ms)||Date.now());
+    return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} - ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function showHistory(){
+    const rows=state.laps;
+    $('history').hidden=rows.length===0;
+    const body=$('history-body');
+    body.replaceChildren();
+    if(!rows.length)return;
+    const vals=rows.map(e=>Number(e.lapMs));
+    const best=Math.min(...vals),worst=Math.max(...vals);
+    const groupColors=state.settings.colorLaps&&rows.length>1&&worst>best;
+    const fragment=document.createDocumentFragment();
+    // Most recent records are rendered first, so new laps never push the viewport down.
+    rows.slice().reverse().forEach((entry,i)=>{
+      const tr=document.createElement('tr');
+      const n=Number(entry.lapMs);
+      if(groupColors)tr.className=n===best?'fast':n===worst?'slow':'';
+      for(const value of [String(rows.length-i),timeFormat(entry.lapMs),timeFormat(entry.totalMs),dateFormat(entry.at)]){
+        const td=document.createElement('td');td.textContent=value;tr.appendChild(td);
+      }
+      const td=document.createElement('td'),b=document.createElement('button');
+      b.type='button';b.className='remove-lap';b.textContent='×';b.setAttribute('aria-label',`${rows.length-i}번 랩 삭제`);
+      b.addEventListener('click',()=>removeLap(entry.id));td.appendChild(b);tr.appendChild(td);fragment.appendChild(tr);
+    });
+    body.appendChild(fragment);
+  }
+  function keepPosition(action){
+    const top=window.scrollY;
+    action();
+    if(Math.abs(window.scrollY-top)>1)window.scrollTo(0,top);
+  }
+  function lap(){
+    if(!state.running)return;
+    const elapsed=nowElapsed();
+    state.laps.push({id:`${Date.now()}-${Math.random().toString(36).slice(2,9)}`,lapMs:Math.max(0,elapsed-state.lapStartMs),totalMs:elapsed,at:Date.now()});
+    state.lapStartMs=elapsed;
+    keepPosition(()=>{showHistory();$('history-viewport').scrollTop=0;});
+    clock();persist();
+  }
+  function clearLaps(){state.laps=[];state.lapStartMs=nowElapsed();keepPosition(showHistory);clock();persist();}
+  function removeLap(id){
+    state.laps=state.laps.filter(e=>e.id!==id);
+    keepPosition(showHistory);persist();
+  }
+  function csv(){
+    if(!state.laps.length)return;
+    const escape=t=>'"'+String(t).replaceAll('"','""')+'"';
+    const rows=[['#','랩 타임','경과 시간','현재 시간'],...state.laps.map((e,i)=>[String(i+1),timeFormat(e.lapMs),timeFormat(e.totalMs),dateFormat(e.at)])];
+    const payload='\ufeff'+rows.map(row=>row.map(escape).join(',')).join('\r\n');
+    const url=URL.createObjectURL(new Blob([payload],{type:'text/csv;charset=utf-8;'}));
+    const a=document.createElement('a');const d=new Date();
+    a.href=url;a.download=`laps_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+  }
+  function settingsApply(){
+    const s=state.settings;
+    $('set-colors').checked=!!s.colorLaps;
+    $('set-fs-lap').checked=!!s.fsLap;
+    $('set-fs-records').checked=!!s.fsRecords;
+    $('set-fs-buttons').checked=!!s.fsButtons;
+    $('set-beep').checked=!!s.beep;
+    $('set-main-size').value=s.mainSize;
+    $('set-lap-size').value=s.lapSize;
+    $('set-button-size').value=s.buttonSize;
+    $('main-size-label').textContent=s.mainSize;
+    $('lap-size-label').textContent=s.lapSize;
+    $('button-size-label').textContent=s.buttonSize;
+    $('beep-duration-row').hidden=!s.beep;
+    $('beep-h').value=s.beepH;$('beep-m').value=s.beepM;$('beep-s').value=s.beepS;
+    $('stopwatch-app').style.setProperty('--clock-limit',`${Math.max(90,Number(s.mainSize)||185)}px`);
+    $('stopwatch-app').style.setProperty('--lap-limit',`${Math.max(20,Number(s.lapSize)||40)}px`);
+    const b=Math.min(320,Math.max(80,Number(s.buttonSize)||170));
+    $('stopwatch-app').style.setProperty('--button-width',`${b}px`);
+    $('stopwatch-app').style.setProperty('--button-height',`${Math.round(27+b*.075)}px`);
+    $('stopwatch-app').style.setProperty('--button-font',`${Math.round(9+b*.024)}px`);
+    $('stopwatch-app').classList.toggle('fs-lap-visible',!!s.fsLap);
+    $('stopwatch-app').classList.toggle('fs-records-visible',!!s.fsRecords);
+    $('stopwatch-app').classList.toggle('fs-buttons-visible',!!s.fsButtons);
+    // Do not rebuild thousands of records while dragging a size slider.
+  }
+  function setOption(k,v){state.settings[k]=v;settingsApply();if(k==='colorLaps')keepPosition(showHistory);if(k==='beep')soundInit();if(k.startsWith('beep'))beepReset();persist();}
+  function settingsOpen(isOpen){$('settings').hidden=!isOpen;$('settings-button').setAttribute('aria-expanded',String(isOpen));}
+  function applyImmersive(){
+    $('stopwatch-app').classList.toggle('immersive',state.immersive);
+    document.body.classList.toggle('immersive-on',state.immersive);
+  }
+  // User activation is needed for the browser-level Fullscreen API. The CSS
+  // fullscreen layout is deliberately independent so Escape/reload cannot
+  // unexpectedly change the screen to the regular app layout.
+  function fullscreen(){
+    settingsOpen(false);
+    if(state.immersive){
+      state.immersive=false;applyImmersive();persist();
+      if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+    }else{
+      state.immersive=true;applyImmersive();persist();
+      if(!document.fullscreenElement && $('stopwatch-app').requestFullscreen){
+        $('stopwatch-app').requestFullscreen().catch(()=>{});
+      }
+    }
+  }
+  $('start').addEventListener('click',start);
+  $('resume').addEventListener('click',start);
+  $('pause').addEventListener('click',pause);
+  $('reset').addEventListener('click',reset);
+  $('lap').addEventListener('click',lap);
+  $('clear').addEventListener('click',clearLaps);
+  $('export').addEventListener('click',csv);
+  $('settings-button').addEventListener('click',()=>settingsOpen($('settings').hidden));
+  $('fullscreen-button').addEventListener('click',fullscreen);
+  document.addEventListener('pointerdown',e=>{
+    if(!$('settings').hidden&&!$('settings').contains(e.target)&&!$('settings-button').contains(e.target))settingsOpen(false);
+  });
+  for(const [id,key] of [['set-colors','colorLaps'],['set-fs-lap','fsLap'],['set-fs-records','fsRecords'],['set-fs-buttons','fsButtons'],['set-beep','beep']]){
+    $(id).addEventListener('change',e=>setOption(key,e.target.checked));
+  }
+  for(const [id,key] of [['set-main-size','mainSize'],['set-lap-size','lapSize'],['set-button-size','buttonSize']]){
+    $(id).addEventListener('input',e=>setOption(key,Number(e.target.value)));
+  }
+  for(const [id,key,max] of [['beep-h','beepH',99],['beep-m','beepM',59],['beep-s','beepS',59]]){
+    $(id).addEventListener('change',e=>setOption(key,Math.min(max,Math.max(0,Math.floor(Number(e.target.value)||0)))));
+  }
+  document.addEventListener('keydown',e=>{
+    if(e.ctrlKey||e.altKey||e.metaKey||e.repeat)return;
+    if(e.key==='Escape'&&!$('settings').hidden){settingsOpen(false);return;}
+    const t=e.target;
+    if(t?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(t?.tagName)||t?.closest?.('#settings'))return;
+    if(e.code==='KeyR'&&e.shiftKey){e.preventDefault();clearLaps();return;}
+    if(e.code==='Space'){e.preventDefault();state.running?pause():start();}
+    else if(e.code==='KeyL'){e.preventDefault();lap();}
+    else if(e.code==='KeyR'){e.preventDefault();reset();}
+    else if(e.code==='KeyF'){e.preventDefault();fullscreen();}
+  });
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)persist();});
+  window.addEventListener('pagehide',persist);
+  window.setInterval(()=>{if(state.running)persist();},5000);
+  const tick=()=>{clock();requestAnimationFrame(tick);};
+  controls();settingsApply();applyImmersive();showHistory();clock();beepReset();persist();requestAnimationFrame(tick);
+  if('serviceWorker' in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
